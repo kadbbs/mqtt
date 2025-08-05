@@ -1,0 +1,4 @@
+out/build/**
+
+!out/build/linux_arm64/sen_mqtt
+!out/build/linux_x86_64/sen_mqtt

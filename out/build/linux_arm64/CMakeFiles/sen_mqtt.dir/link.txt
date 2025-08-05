@@ -1,1 +1,0 @@
-/usr/local/arm/bin/aarch64-linux-g++  -g   CMakeFiles/sen_mqtt.dir/main.cpp.o  -o sen_mqtt 

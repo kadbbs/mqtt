@@ -53,4 +53,9 @@ clean:
 install: $(TARGET)
 	install -D $(TARGET) $(HOME)/.local/bin/$(TARGET)
 
-.PHONY: all clean install
+scp:
+	scp out/build/linux_arm64/sen_mqtt root@kf:/userdata/yun/exec
+
+.PHONY: all clean install scp
+
+
