@@ -1,6 +1,7 @@
 #include <mqtt/async_client.h>
 #include <string>
 #include <iostream>
+#include "publisher.hpp"
 const std::string SERVER_ADDRESS("broker.emqx.io:1883");
 const std::string CLIENT_ID("cpp_publisher");
 const std::string TOPIC("yun/topic");
