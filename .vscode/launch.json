@@ -1,0 +1,25 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Remote ARM Debug",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/publisher",  // 本地编译好的ARM程序路径
+            "miDebuggerPath": "aarch64-rockchip-linux-gnu-gdb",     // 交叉编译GDB路径
+            "miDebuggerServerAddress": "192.168.1.234:2333", // 目标设备IP:端口
+            "cwd": "${workspaceFolder}",
+            "stopAtEntry": true,
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        }
+    ]
+}

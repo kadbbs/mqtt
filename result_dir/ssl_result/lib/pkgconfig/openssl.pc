@@ -1,0 +1,9 @@
+prefix=/home/ubu/code/armmqtt/openssl-OpenSSL_1_1_1g/ssl_result
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: OpenSSL
+Description: Secure Sockets Layer and cryptography libraries and tools
+Version: 1.1.1g
+Requires: libssl libcrypto
