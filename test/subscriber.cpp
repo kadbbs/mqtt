@@ -2,6 +2,7 @@
 #include <string>
 #include <iostream>
 
+// const std::string SERVER_ADDRESS("mqtts://broker.emqx.io:8883");
 const std::string SERVER_ADDRESS("broker.emqx.io:1883");
 const std::string CLIENT_ID("cpp_subscriber");
 const std::string TOPIC("yun/topic");

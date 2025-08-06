@@ -20,7 +20,6 @@ public:
                                     CLIENT_ID(client_id),TOPIC(topic),client(SERVER_ADDRESS, CLIENT_ID) {
                                         connect();
                                     }
-
     ~Publisher() {
         disconnect();
     }
