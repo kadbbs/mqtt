@@ -1,33 +1,24 @@
-#include <mqtt/async_client.h>
 #include <string>
 #include <iostream>
 #include "publisher.hpp"
-const std::string SERVER_ADDRESS("broker.emqx.io:1883");
-const std::string CLIENT_ID("cpp_publisher");
-const std::string TOPIC("yun/topic");
+#include "subscriber.hpp"
 
-int main() {
-    mqtt::async_client client(SERVER_ADDRESS, CLIENT_ID);
+int main(int argc, char const *argv[])
+{
+    Publisher publisher("broker.emqx.io:1883", "cpp_publisher", "yun/topic");
+    Subscriber subscriber("broker.emqx.io:1883", "cpp_subscriber", "yun/topic");
 
-    mqtt::connect_options connOpts;
-    connOpts.set_keep_alive_interval(20);
-    connOpts.set_clean_session(true);
+    try
+    {
 
-    try {
-        // Connect to EMQX broker
-        client.connect(connOpts)->wait();
-        std::cout << "Connected to EMQX broker" << std::endl;
-
+        // Subscribe to the topic and wait for messages
+        subscriber.subtopic();
         // Publish a message
-        std::string payload = "Hello, EMQX from C++!";
-        mqtt::message_ptr pubmsg = mqtt::make_message(TOPIC, payload, 1, false);
-        client.publish(pubmsg)->wait();
-        std::cout << "Message published: " << payload << std::endl;
-
-        // Disconnect
-        client.disconnect()->wait();
-        std::cout << "Disconnected" << std::endl;
-    } catch (const mqtt::exception& exc) {
+        publisher.publish("Hello, MQTT!");
+        while(1){}
+    }
+    catch (const mqtt::exception &exc)
+    {
         std::cerr << "Error: " << exc.what() << std::endl;
         return 1;
     }

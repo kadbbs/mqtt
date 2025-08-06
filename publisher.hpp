@@ -17,8 +17,13 @@ private:
 
 public:
     Publisher(std::string server="broker.emqx.io:1883",std::string client_id="cpp_publisher",std::string topic="yun/topic") :SERVER_ADDRESS(server),
-                                    CLIENT_ID(client_id),TOPIC(topic),client(SERVER_ADDRESS, CLIENT_ID) {}
+                                    CLIENT_ID(client_id),TOPIC(topic),client(SERVER_ADDRESS, CLIENT_ID) {
+                                        connect();
+                                    }
 
+    ~Publisher() {
+        disconnect();
+    }
     void connect()
     {
         mqtt::connect_options connOpts;
@@ -40,6 +45,13 @@ public:
     void publish(const std::string &payload)
     {
         mqtt::message_ptr pubmsg = mqtt::make_message(TOPIC, payload, 1, false);
+        client.publish(pubmsg)->wait();
+        std::cout << "Message published: " << payload << std::endl;
+    }
+
+    void publish(const std::string &payload,const std::string topic,int qos=1, bool retained=false)
+    {
+        mqtt::message_ptr pubmsg = mqtt::make_message(topic, payload, qos, retained);
         client.publish(pubmsg)->wait();
         std::cout << "Message published: " << payload << std::endl;
     }
