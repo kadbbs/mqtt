@@ -125,7 +125,7 @@ private:
         config.stop_bits = stop_bits;
 
         data.regaddr_l = 0x00;
-        data.regcnt_l = 0x02;
+        data.regcnt_l = 0x08;
         tx_cmd = (uint8_t *)&data;
         tx_len = sizeof(data);
         data.crc16 = modbus_crc16(tx_cmd, tx_len - 2);
@@ -269,9 +269,15 @@ public:
                         printf("%02X ", i);
                     }
                     printf("copy tempdata\n");
-                    float floatValue;
-                    memcpy(&floatValue, tempdata.data(), sizeof(float)); // 避免类型双关（type-punning）问题
-                    std::cout << "\nFloat Value: " << floatValue << std::endl;
+                    float floatValue[4];
+                    memcpy(&floatValue[0], tempdata.data(), sizeof(float)); // 避免类型双关（type-punning）问题
+                    memcpy(&floatValue[1], tempdata.data()+4, sizeof(float)); // 避免类型双关（type-punning）问题
+                    memcpy(&floatValue[2], tempdata.data()+8, sizeof(float)); // 避免类型双关（type-punning）问题
+                    memcpy(&floatValue[3], tempdata.data()+12, sizeof(float)); // 避免类型双关（type-punning）问题
+                    std::cout << "\nx_Float Value: " << floatValue[0] << std::endl;
+                    std::cout << "\ny_Float Value: " << floatValue[1] << std::endl;
+                    std::cout << "\nz_Float Value: " << floatValue[2] << std::endl;
+                    std::cout << "\nt_Float Value: " << floatValue[3] << std::endl;
                     buff.push(tempdata);
                 }
             }
