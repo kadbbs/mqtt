@@ -14,6 +14,13 @@ target_link_options(sen_mqtt PRIVATE
     "-Wl,-rpath=/userdata/.local/lib"
     "-g"
 )
+# 设置宏前缀映射以简化调试信息
+# target_compile_options(
+#     # sen_mqtt PRIVATE -fmacro-prefix-map=${CMAKE_SOURCE_DIR}=.
+#     -g
+    
+# )
+
 # 包含头文件路径
 target_include_directories(sen_mqtt
     PRIVATE 

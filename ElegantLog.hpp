@@ -30,7 +30,7 @@ namespace ElegantLog
         FATAL
     };
 
-    inline const char *levelToString(LogLevel level)
+    inline const std::string levelToString(LogLevel level)
     {
         static const char *levels[] = {"TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL"};
         auto index = static_cast<size_t>(level);
@@ -40,42 +40,40 @@ namespace ElegantLog
     // ==================== 格式化工具 ====================
     namespace detail
     {
-        // 基础情况：没有更多参数时
+        // 结束递归
         inline void formatHelper(std::ostringstream &oss, const std::string &fmt, size_t pos = 0)
         {
             oss << fmt.substr(pos);
         }
 
-        // 递归情况：处理一个参数
+        // 单参数版本
         template <typename T>
-        void formatHelper(std::ostringstream &oss, const std::string &fmt,
-                          size_t pos, T &&arg)
+        void formatHelper(std::ostringstream &oss, const std::string &fmt, size_t pos, T &&arg)
         {
-            pos = fmt.find("{}", pos);
-            if (pos == std::string::npos)
+            size_t next_pos = fmt.find("{}", pos);
+            if (next_pos == std::string::npos)
             {
-                oss << fmt.substr(0, pos);
+                oss << fmt.substr(pos); // 只输出剩余部分
                 return;
             }
-            oss << fmt.substr(0, pos);
+            oss << fmt.substr(pos, next_pos - pos);
             oss << std::forward<T>(arg);
-            formatHelper(oss, fmt, pos + 2);
+            formatHelper(oss, fmt, next_pos + 2);
         }
 
-        // 递归情况：处理多个参数
+        // 多参数版本
         template <typename T, typename... Args>
-        void formatHelper(std::ostringstream &oss, const std::string &fmt,
-                          size_t pos, T &&arg, Args &&...args)
+        void formatHelper(std::ostringstream &oss, const std::string &fmt, size_t pos, T &&arg, Args &&...args)
         {
-            pos = fmt.find("{}", pos);
-            if (pos == std::string::npos)
+            size_t next_pos = fmt.find("{}", pos);
+            if (next_pos == std::string::npos)
             {
-                oss << fmt.substr(0, pos);
+                oss << fmt.substr(pos);
                 return;
             }
-            oss << fmt.substr(0, pos);
+            oss << fmt.substr(pos, next_pos - pos);
             oss << std::forward<T>(arg);
-            formatHelper(oss, fmt, pos + 2, std::forward<Args>(args)...);
+            formatHelper(oss, fmt, next_pos + 2, std::forward<Args>(args)...);
         }
     }
 
@@ -142,127 +140,143 @@ namespace ElegantLog
         bool m_use_color;
     };
 
-// 在 ElegantLog.hpp 中完善 FileSink 类
-class FileSink : public Sink {
-public:
-    /**
-     * @param base_filename  基础文件名 (如 "app.log")
-     * @param max_size       单个日志文件最大字节数 (默认10MB)
-     * @param max_files      保留的日志文件个数 (默认5个)
-     * @param flush_interval 自动刷新间隔(秒) (默认3秒)
-     */
-    explicit FileSink(const std::string& base_filename,
-                    size_t max_size = 10 * 1024 * 1024,
-                    uint8_t max_files = 5,
-                    int flush_interval = 3)
-        : m_base_filename(base_filename),
-          m_max_size(max_size),
-          m_max_files(max_files),
-          m_flush_interval(flush_interval) {
-        openFile();
-        startFlushThread();
-    }
+    // 在 ElegantLog.hpp 中完善 FileSink 类
+    class FileSink : public Sink
+    {
+    public:
+        /**
+         * @param base_filename  基础文件名 (如 "app.log")
+         * @param max_size       单个日志文件最大字节数 (默认10MB)
+         * @param max_files      保留的日志文件个数 (默认5个)
+         * @param flush_interval 自动刷新间隔(秒) (默认3秒)
+         */
+        explicit FileSink(const std::string &base_filename,
+                          size_t max_size = 10 * 1024 * 1024,
+                          uint8_t max_files = 5,
+                          int flush_interval = 3)
+            : m_base_filename(base_filename),
+              m_max_size(max_size),
+              m_max_files(max_files),
+              m_flush_interval(flush_interval)
+        {
+            openFile();
+            startFlushThread();
+        }
 
-    ~FileSink() {
-        stopFlushThread();
-        if (m_file.is_open()) {
-            m_file.flush();
+        ~FileSink()
+        {
+            stopFlushThread();
+            if (m_file.is_open())
+            {
+                m_file.flush();
+                m_file.close();
+            }
+        }
+
+        void log(LogLevel level, const std::string &message) override
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+
+            // 检查是否需要轮转
+            if (m_current_size + message.size() > m_max_size)
+            {
+                rotateFile();
+            }
+
+            // 写入日志 (包含时间戳)
+            auto now = std::chrono::system_clock::now();
+            m_file << formatTime(now) << " [" << levelToString(level) << "] "
+                   << message << '\n';
+            m_current_size += message.size();
+
+            // 标记需要刷新
+            m_needs_flush = true;
+        }
+
+        void flush() override
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            if (m_file.is_open())
+            {
+                m_file.flush();
+                m_needs_flush = false;
+            }
+        }
+
+    private:
+        void openFile()
+        {
+            m_file.open(m_base_filename, std::ios::app);
+            if (!m_file.is_open())
+            {
+                throw std::runtime_error("无法打开日志文件: " + m_base_filename);
+            }
+            m_file.seekp(0, std::ios::end);
+            m_current_size = m_file.tellp();
+        }
+
+        void rotateFile()
+        {
             m_file.close();
+
+            // 轮转旧文件 (app.log.1 → app.log.2, etc.)
+            for (int i = m_max_files - 1; i > 0; --i)
+            {
+                std::string old_name = m_base_filename + "." + std::to_string(i);
+                std::string new_name = m_base_filename + "." + std::to_string(i + 1);
+                std::rename(old_name.c_str(), new_name.c_str());
+            }
+
+            // 当前文件 → app.log.1
+            std::rename(m_base_filename.c_str(), (m_base_filename + ".1").c_str());
+
+            // 创建新文件
+            openFile();
         }
-    }
 
-    void log(LogLevel level, const std::string& message) override {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        
-        // 检查是否需要轮转
-        if (m_current_size + message.size() > m_max_size) {
-            rotateFile();
+        std::string formatTime(const std::chrono::system_clock::time_point &tp)
+        {
+            auto in_time_t = std::chrono::system_clock::to_time_t(tp);
+            std::tm tm;
+            localtime_r(&in_time_t, &tm); // 线程安全版本
+
+            char buffer[80];
+            strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &tm);
+            return buffer;
         }
-        
-        // 写入日志 (包含时间戳)
-        auto now = std::chrono::system_clock::now();
-        m_file << formatTime(now) << " [" << levelToString(level) << "] "
-               << message << '\n';
-        m_current_size += message.size();
-        
-        // 标记需要刷新
-        m_needs_flush = true;
-    }
 
-    void flush() override {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        if (m_file.is_open()) {
-            m_file.flush();
-            m_needs_flush = false;
-        }
-    }
-
-private:
-    void openFile() {
-        m_file.open(m_base_filename, std::ios::app);
-        if (!m_file.is_open()) {
-            throw std::runtime_error("无法打开日志文件: " + m_base_filename);
-        }
-        m_file.seekp(0, std::ios::end);
-        m_current_size = m_file.tellp();
-    }
-
-    void rotateFile() {
-        m_file.close();
-        
-        // 轮转旧文件 (app.log.1 → app.log.2, etc.)
-        for (int i = m_max_files - 1; i > 0; --i) {
-            std::string old_name = m_base_filename + "." + std::to_string(i);
-            std::string new_name = m_base_filename + "." + std::to_string(i + 1);
-            std::rename(old_name.c_str(), new_name.c_str());
-        }
-        
-        // 当前文件 → app.log.1
-        std::rename(m_base_filename.c_str(), (m_base_filename + ".1").c_str());
-        
-        // 创建新文件
-        openFile();
-    }
-
-    std::string formatTime(const std::chrono::system_clock::time_point& tp) {
-        auto in_time_t = std::chrono::system_clock::to_time_t(tp);
-        std::tm tm;
-        localtime_r(&in_time_t, &tm);  // 线程安全版本
-        
-        char buffer[80];
-        strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &tm);
-        return buffer;
-    }
-
-    void startFlushThread() {
-        m_flush_thread = std::thread([this] {
+        void startFlushThread()
+        {
+            m_flush_thread = std::thread([this]
+                                         {
             while (!m_stop_flush_thread) {
                 std::this_thread::sleep_for(std::chrono::seconds(m_flush_interval));
                 if (m_needs_flush) {
                     flush();
                 }
-            }
-        });
-    }
-
-    void stopFlushThread() {
-        m_stop_flush_thread = true;
-        if (m_flush_thread.joinable()) {
-            m_flush_thread.join();
+            } });
         }
-    }
 
-    std::string m_base_filename;
-    std::ofstream m_file;
-    size_t m_current_size = 0;
-    const size_t m_max_size;
-    const uint8_t m_max_files;
-    const int m_flush_interval;
-    std::mutex m_mutex;
-    std::thread m_flush_thread;
-    std::atomic<bool> m_stop_flush_thread{false};
-    std::atomic<bool> m_needs_flush{false};
-};
+        void stopFlushThread()
+        {
+            m_stop_flush_thread = true;
+            if (m_flush_thread.joinable())
+            {
+                m_flush_thread.join();
+            }
+        }
+
+        std::string m_base_filename;
+        std::ofstream m_file;
+        size_t m_current_size = 0;
+        const size_t m_max_size;
+        const uint8_t m_max_files;
+        const int m_flush_interval;
+        std::mutex m_mutex;
+        std::thread m_flush_thread;
+        std::atomic<bool> m_stop_flush_thread{false};
+        std::atomic<bool> m_needs_flush{false};
+    };
 
     // ==================== 异步日志引擎 ====================
     class AsyncLogEngine
@@ -423,19 +437,20 @@ private:
         std::unique_ptr<AsyncLogEngine> m_async_engine;
     };
 
-// ==================== 便捷宏 ====================
+    // ==================== 便捷宏 ====================
+
 #define LOG_TRACE(fmt, ...) \
-    ElegantLog::Logger::instance().log(ElegantLog::LogLevel::TRACE, fmt, ##__VA_ARGS__)
+    ElegantLog::Logger::instance().log(ElegantLog::LogLevel::TRACE, "[{}:{}][{}] " fmt, __FILE__, __LINE__, __func__,  ##__VA_ARGS__)
 #define LOG_DEBUG(fmt, ...) \
-    ElegantLog::Logger::instance().log(ElegantLog::LogLevel::DEBUG, fmt, ##__VA_ARGS__)
+    ElegantLog::Logger::instance().log(ElegantLog::LogLevel::DEBUG, "[{}:{}][{}] " fmt, __FILE__, __LINE__, __func__,  ##__VA_ARGS__)
 #define LOG_INFO(fmt, ...) \
-    ElegantLog::Logger::instance().log(ElegantLog::LogLevel::INFO, fmt, ##__VA_ARGS__)
+    ElegantLog::Logger::instance().log(ElegantLog::LogLevel::INFO, "[{}:{}][{}] " fmt, __FILE__, __LINE__, __func__,  ##__VA_ARGS__)
 #define LOG_WARN(fmt, ...) \
-    ElegantLog::Logger::instance().log(ElegantLog::LogLevel::WARN, fmt, ##__VA_ARGS__)
+    ElegantLog::Logger::instance().log(ElegantLog::LogLevel::WARN, "[{}:{}][{}] " fmt,  __FILE__, __LINE__, __func__, ##__VA_ARGS__)
 #define LOG_ERROR(fmt, ...) \
-    ElegantLog::Logger::instance().log(ElegantLog::LogLevel::ERROR, fmt, ##__VA_ARGS__)
+    ElegantLog::Logger::instance().log(ElegantLog::LogLevel::ERROR, "[{}:{}][{}] " fmt,  __FILE__, __LINE__, __func__, ##__VA_ARGS__)
 #define LOG_FATAL(fmt, ...) \
-    ElegantLog::Logger::instance().log(ElegantLog::LogLevel::FATAL, fmt, ##__VA_ARGS__)
+    ElegantLog::Logger::instance().log(ElegantLog::LogLevel::FATAL, "[{}:{}][{}] " fmt,  __FILE__, __LINE__, __func__, ##__VA_ARGS__)
 
     // ==================== 初始化工具 ====================
     inline void initDefaultLogger(bool console = true, bool file = false,

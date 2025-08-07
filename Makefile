@@ -4,8 +4,8 @@ CXX = $(CROSS_COMPILE)g++
 CC = $(CROSS_COMPILE)gcc
 
 # 项目设置
-TARGET = publisher
-SRC = publisher.cpp
+TARGET = sen_mqtt
+SRC = main.cpp
 
 # 头文件路径 (根据实际路径修改)
 INC_DIRS = \
@@ -44,7 +44,7 @@ LDFLAGS = \
 all: $(TARGET)
 
 $(TARGET): $(SRC)
-	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) $^ -o bin/$@ $(LDFLAGS)
 
 clean:
 	rm -f $(TARGET)
@@ -55,6 +55,9 @@ install: $(TARGET)
 
 scp:
 	scp out/build/linux_arm64/sen_mqtt root@kf:/userdata/yun/exec
+
+binscp:
+	scp -p bin/sen_mqtt root@kf:/userdata/yun/exec
 
 .PHONY: all clean install scp
 

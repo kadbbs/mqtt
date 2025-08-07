@@ -20,7 +20,6 @@
 int main(int argc, char const *argv[])
 {
     // std::signal(SIGINT, signal_handler);
-
     // 初始化日志系统
     auto &logger = ElegantLog::Logger::instance();
 
@@ -29,7 +28,7 @@ int main(int argc, char const *argv[])
 
     // 添加文件输出 (10MB轮转，保留3个文件，每5秒刷新)
     logger.addSink(std::make_shared<ElegantLog::FileSink>(
-        "myapp.log",
+        "log/myapp.log",
         10 * 1024*1024, // 10MB
         5,                // 保留5个文件
         5                 // 每5秒刷新
@@ -47,8 +46,8 @@ int main(int argc, char const *argv[])
     {
         LOG_INFO("This is log message {}, testing file rotation", i);
     }
-    // 显式刷新日志或关闭异步
 
+    LOG_INFO("This is log message {}, testing file rotation", 7);
     std::this_thread::sleep_for(std::chrono::seconds(13)); // 简单休眠
     try
     {
