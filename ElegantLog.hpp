@@ -182,7 +182,6 @@ namespace ElegantLog
             {
                 rotateFile();
             }
-
             // 写入日志 (包含时间戳)
             auto now = std::chrono::system_clock::now();
             m_file << formatTime(now) << " [" << levelToString(level) << "] "
@@ -202,7 +201,6 @@ namespace ElegantLog
                 m_needs_flush = false;
             }
         }
-
     private:
         void openFile()
         {

@@ -13,7 +13,7 @@ int main() {
     
     // 测试日志写入
     for (int i = 0; i < 10; ++i) {
-        LOG_INFO("This is log message {}, testing file rotation", i);
+        LOG_INFO("This is log message , testing file rotation", i);
     }
     
     return 0;
