@@ -30,8 +30,8 @@ int main(int argc, char const *argv[])
     // 添加文件输出 (10MB轮转，保留3个文件，每5秒刷新)
     logger.addSink(std::make_shared<ElegantLog::FileSink>(
         "myapp.log",
-        10 * 1024 * 1024, // 10MB
-        3,                // 保留3个文件
+        10 * 1024*1024, // 10MB
+        5,                // 保留5个文件
         5                 // 每5秒刷新
         ));
 
