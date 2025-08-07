@@ -1,6 +1,3 @@
-// #define SPDLOG_NO_TLS  // 禁用 TLS
-// #include "spdlog/spdlog.h"
-
 #include <string>
 #include <csignal>
 #include <iostream>
@@ -8,46 +5,16 @@
 #include "subscriber.hpp"
 #include "serial.hpp"
 #include "ElegantLog.hpp"
-
-// void signal_handler(int signal) {
-//     LOG_WARN("收到中断信号: {}", signal);
-//     LOG_INFO("日志系统已停止");
-//     // 显式停止日志系统
-//     ElegantLog::Logger::instance().flushSinks();
-//     ElegantLog::Logger::instance().setAsync(false); // stop async engine
-//     exit(0);
-// }
 int main(int argc, char const *argv[])
 {
-    // std::signal(SIGINT, signal_handler);
+
     // 初始化日志系统
-    auto &logger = ElegantLog::Logger::instance();
-
-    // 添加控制台输出
-    logger.addSink(std::make_shared<ElegantLog::ConsoleSink>());
-
-    // 添加文件输出 (10MB轮转，保留3个文件，每5秒刷新)
-    logger.addSink(std::make_shared<ElegantLog::FileSink>(
-        "log/myapp.log",
-        10 * 1024*1024, // 10MB
-        5,                // 保留5个文件
-        5                 // 每5秒刷新
-        ));
-
-    // 设置日志级别
-    logger.setLevel(ElegantLog::LogLevel::DEBUG);
+    ElegantLog::initDefaultLogger(true, true, "log/myapp.log");
 
     Publisher publisher("broker.emqx.io:1883", "cpp_publisher", "yun/topic");
     Subscriber subscriber("broker.emqx.io:1883", "cpp_subscriber", "yun/topic");
     auto &serial = meteserial::instance();
     serial.start();
-    // 测试日志写入
-    for (int i = 0; i < 1000; ++i)
-    {
-        LOG_INFO("This is log message {}, testing file rotation", i);
-    }
-
-    LOG_INFO("This is log message {}, testing file rotation", 7);
     std::this_thread::sleep_for(std::chrono::seconds(13)); // 简单休眠
     try
     {
@@ -70,7 +37,7 @@ int main(int argc, char const *argv[])
     }
     catch (const mqtt::exception &exc)
     {
-        std::cerr << "Error: " << exc.what() << std::endl;
+        LOG_ERROR("Error: {}", exc.what());
         return 1;
     }
 

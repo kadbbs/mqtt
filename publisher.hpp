@@ -3,7 +3,7 @@
 #include <mqtt/async_client.h>
 #include <string>
 #include <iostream>
-
+#include "ElegantLog.hpp"
 
 class Publisher
 {
@@ -32,11 +32,11 @@ public:
         try
         {
             client.connect(connOpts)->wait();
-            std::cout << "Connected to EMQX broker" << std::endl;
+            LOG_INFO("Connected to EMQX broker");
         }
         catch (const mqtt::exception &exc)
         {
-            std::cerr << "Error: " << exc.what() << std::endl;
+            LOG_ERROR("Error: {}", exc.what());
             throw;
         }
     }
@@ -45,20 +45,21 @@ public:
     {
         mqtt::message_ptr pubmsg = mqtt::make_message(TOPIC, payload, 1, false);
         client.publish(pubmsg)->wait();
-        std::cout << "Message published: " << payload << std::endl;
+        
+        LOG_INFO("Message published: {}", payload);
     }
 
     void publish(const std::string &payload,const std::string topic,int qos=1, bool retained=false)
     {
         mqtt::message_ptr pubmsg = mqtt::make_message(topic, payload, qos, retained);
         client.publish(pubmsg)->wait();
-        std::cout << "Message published: " << payload << std::endl;
+        LOG_INFO("Message published: {}", payload);
     }
 
     void disconnect()
     {
         client.disconnect()->wait();
-        std::cout << "Disconnected" << std::endl;
+        LOG_INFO("Disconnected from EMQX broker");
     }
 };
 

@@ -2,12 +2,12 @@
 #include <mqtt/async_client.h>
 #include <string>
 #include <iostream>
-
+#include "ElegantLog.hpp"
 class callback : public virtual mqtt::callback
 {
     void message_arrived(mqtt::const_message_ptr msg) override
     {
-        std::cout << "Message received: " << msg->get_payload_str() << std::endl;
+        LOG_INFO("Message arrived: {}", msg->get_payload_str());
     }
 };
 
@@ -41,12 +41,12 @@ public:
         {
             // Connect to EMQX broker
             client.connect(connOpts)->wait();
-            std::cout << "Connected to EMQX broker" << std::endl;
+            LOG_INFO("Connected to EMQX broker");
 
         }
         catch (const mqtt::exception &exc)
         {
-            std::cerr << "Error: " << exc.what() << std::endl;
+            LOG_ERROR("Error: {}", exc.what());
             return 1;
         }
     }
@@ -55,24 +55,24 @@ public:
     {
         // Subscribe to topic
         client.subscribe(TOPIC, 1)->wait();
-        std::cout << "Subscribed to topic: " << TOPIC << std::endl;
+        LOG_INFO("Subscribed to topic: {}", TOPIC);
 
     }
     void subtopic(std::string topic, int qos=1)
     {
         // Subscribe to topic
         client.subscribe(topic, 1)->wait();
-        std::cout << "Subscribed to topic: " << TOPIC << std::endl;
+        LOG_INFO("Subscribed to topic: {}", topic);
 
         // Keep running to receive messages
-        std::cout << "Press Enter to exit..." << std::endl;
+        LOG_INFO("Press Enter to exit...");
         std::cin.get();
     }
 
     void disconnect()
     {
         client.disconnect()->wait();
-        std::cout << "Disconnected" << std::endl;
+        LOG_INFO("Disconnected from EMQX broker");
     }
 };
 

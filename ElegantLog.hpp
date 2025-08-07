@@ -1,6 +1,8 @@
 // ElegantLog.hpp
 #pragma once
-
+#include <sys/stat.h>
+#include <unistd.h>
+#include <iostream>
 #include <atomic>
 #include <chrono>
 #include <ctime>
@@ -201,6 +203,7 @@ namespace ElegantLog
                 m_needs_flush = false;
             }
         }
+
     private:
         void openFile()
         {
@@ -352,7 +355,7 @@ namespace ElegantLog
     public:
         Logger() : m_level(LogLevel::INFO), m_async(true) {}
 
-        void setLevel(LogLevel level) { m_level = level; }
+        void setLevel(LogLevel level=ElegantLog::LogLevel::DEBUG) { m_level = level; }
         LogLevel level() const { return m_level; }
 
         void setAsync(bool async)
@@ -438,24 +441,25 @@ namespace ElegantLog
     // ==================== 便捷宏 ====================
 
 #define LOG_TRACE(fmt, ...) \
-    ElegantLog::Logger::instance().log(ElegantLog::LogLevel::TRACE, "[{}:{}][{}] " fmt, __FILE__, __LINE__, __func__,  ##__VA_ARGS__)
+    ElegantLog::Logger::instance().log(ElegantLog::LogLevel::TRACE, "[{}:{}][{}] " fmt, __FILE__, __LINE__, __func__, ##__VA_ARGS__)
 #define LOG_DEBUG(fmt, ...) \
-    ElegantLog::Logger::instance().log(ElegantLog::LogLevel::DEBUG, "[{}:{}][{}] " fmt, __FILE__, __LINE__, __func__,  ##__VA_ARGS__)
+    ElegantLog::Logger::instance().log(ElegantLog::LogLevel::DEBUG, "[{}:{}][{}] " fmt, __FILE__, __LINE__, __func__, ##__VA_ARGS__)
 #define LOG_INFO(fmt, ...) \
-    ElegantLog::Logger::instance().log(ElegantLog::LogLevel::INFO, "[{}:{}][{}] " fmt, __FILE__, __LINE__, __func__,  ##__VA_ARGS__)
+    ElegantLog::Logger::instance().log(ElegantLog::LogLevel::INFO, "[{}:{}][{}] " fmt, __FILE__, __LINE__, __func__, ##__VA_ARGS__)
 #define LOG_WARN(fmt, ...) \
-    ElegantLog::Logger::instance().log(ElegantLog::LogLevel::WARN, "[{}:{}][{}] " fmt,  __FILE__, __LINE__, __func__, ##__VA_ARGS__)
+    ElegantLog::Logger::instance().log(ElegantLog::LogLevel::WARN, "[{}:{}][{}] " fmt, __FILE__, __LINE__, __func__, ##__VA_ARGS__)
 #define LOG_ERROR(fmt, ...) \
-    ElegantLog::Logger::instance().log(ElegantLog::LogLevel::ERROR, "[{}:{}][{}] " fmt,  __FILE__, __LINE__, __func__, ##__VA_ARGS__)
+    ElegantLog::Logger::instance().log(ElegantLog::LogLevel::ERROR, "[{}:{}][{}] " fmt, __FILE__, __LINE__, __func__, ##__VA_ARGS__)
 #define LOG_FATAL(fmt, ...) \
-    ElegantLog::Logger::instance().log(ElegantLog::LogLevel::FATAL, "[{}:{}][{}] " fmt,  __FILE__, __LINE__, __func__, ##__VA_ARGS__)
+    ElegantLog::Logger::instance().log(ElegantLog::LogLevel::FATAL, "[{}:{}][{}] " fmt, __FILE__, __LINE__, __func__, ##__VA_ARGS__)
 
     // ==================== 初始化工具 ====================
     inline void initDefaultLogger(bool console = true, bool file = false,
-                                  const std::string &filename = "app.log")
+                                  const std::string &filename = "myapp.log")
     {
         auto &logger = Logger::instance();
         logger.removeAllSinks();
+        logger.setLevel(ElegantLog::LogLevel::DEBUG);
 
         if (console)
         {
@@ -466,7 +470,37 @@ namespace ElegantLog
         {
             try
             {
-                logger.addSink(std::make_shared<FileSink>(filename));
+
+                const char *dir = "./log";
+
+                struct stat st;
+                if (stat(dir, &st) == -1)
+                {
+                    LOG_ERROR("log 目录不存在，正在创建...\n");
+                    if (mkdir(dir, 0755) == 0)
+                    {
+                        LOG_ERROR("log 目录创建成功\n");
+                        logger.addSink(std::make_shared<FileSink>(filename));
+                    }
+                    else
+                    {
+
+                        LOG_ERROR("log 目录创建失败\n");
+                    }
+                }
+                else if (!S_ISDIR(st.st_mode))
+                {
+
+                    LOG_ERROR("存在 log，但不是一个目录\n");
+                }
+                else
+                {
+
+                    LOG_INFO("log 目录已存在\n");
+                    logger.addSink(std::make_shared<FileSink>(filename));
+                }
+
+                
             }
             catch (const std::exception &e)
             {
