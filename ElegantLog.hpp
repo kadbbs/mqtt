@@ -21,6 +21,12 @@
 namespace ElegantLog
 {
 
+    std::string formathex(const std::string &fmt,uint8_t data){
+        char buffer[10];
+        snprintf(buffer, sizeof(buffer), fmt.c_str(), data);
+        return std::string(buffer);
+    }
+
     // ==================== 核心枚举和工具 ====================
     enum class LogLevel
     {
@@ -288,7 +294,6 @@ namespace ElegantLog
             m_worker = std::thread([this]
                                    { work(); });
         }
-
         ~AsyncLogEngine()
         {
             stop();
@@ -328,8 +333,7 @@ namespace ElegantLog
                     m_cv.wait(lock, [this]
                               { return !m_queue.empty() || !m_running; });
 
-                    if (!m_running && m_queue.empty())
-                        break;
+                    if (!m_running && m_queue.empty()) break;
 
                     if (!m_queue.empty())
                     {

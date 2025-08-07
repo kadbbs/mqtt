@@ -153,6 +153,7 @@ public:
         {
             close(fd); // Linux 系统调用，Windows 用 CloseHandle()
             fd = -1;   // 标记为已关闭
+
         }
     }
 
@@ -177,13 +178,14 @@ public:
         fd = open(config.com.data(), O_RDWR | O_NOCTTY | O_SYNC);
         if (fd < 0)
         {
-            perror("open");
+            LOG_ERROR("Failed to open serial port: {}{}", config.com,strerror(errno));
             exit(EXIT_FAILURE);
         }
         // 配置串口
         if (configure_serial() < 0)
         {
             close(fd);
+            LOG_ERROR("Failed to configure serial port: {}{}", config.com, strerror(errno));
             exit(EXIT_FAILURE);
         }
         running = true;
@@ -191,7 +193,7 @@ public:
 
     }
 
-    int fromreg()
+    void fromreg()
     {
         while (running)
         {
@@ -207,9 +209,9 @@ public:
                     n = write(fd, tx_cmd + cnt, sizeof(data) - cnt);
                     if (n < 0)
                     {
-                        perror("write");
+                        LOG_ERROR("Failed to write to serial port: {}{}", config.com, strerror(errno));
                         close(fd);
-                        return -1;
+                        exit(-1);
                     }
                     else if (n == 0)
                     {
@@ -226,7 +228,9 @@ public:
                 // 清空读串口缓冲区
                 if (tcflush(fd, TCIFLUSH) == -1)
                 {
-                    perror("Failed to flush read buffer");
+                    LOG_ERROR("Failed to flush read buffer: {}{}", config.com, strerror(errno));
+                    close(fd);
+                    exit(-1);
                     // 错误处理
                 }
                 n = 0;
@@ -236,13 +240,14 @@ public:
                     n = read(fd, rx_buf + cnt, sizeof(rx_buf));
                     if (n < 0)
                     {
-                        perror("read");
+                        LOG_ERROR("Failed to read from serial port: {}{}", config.com, strerror(errno));
                         close(fd);
                         exit(-1);
                     }
                     else if (n == 0)
                     {
                         printf("Timeout reached!\n");
+                        LOG_WARN("Timeout reached when reading from serial port: {}", config.com);
                         break;
                     }
                     cnt += n;
@@ -254,18 +259,13 @@ public:
                 if (0x0000 == modbus_crc16(rx_buf, 5 + data.regcnt_l * 2))
                 {
                     // 打印接收到的原始数据
-                    printf("Received %d bytes: ", cnt);
+                    LOG_INFO("Received {} bytes from serial port: {}", cnt, config.com);
                     for (int i = 0; i < 5 + data.regcnt_l * 2; i++)
                     {
-                        printf("%02X ", rx_buf[i]);
+                        LOG_INFO("{}",ElegantLog::formathex("%02X", rx_buf[i]));
                     }
-                    printf("\n");
+
                     std::vector<uint8_t> tempdata(rx_buf + 3, rx_buf + 3 + data.regcnt_l * 2);
-                    for (auto i : tempdata)
-                    {
-                        printf("%02X ", i);
-                    }
-                    printf("copy tempdata\n");
                     // float floatValue[4];
                     // memcpy(floatValue.data(), tempdata.data(), 4*sizeof(float)); // 避免类型双关（type-punning）问题
 
@@ -279,7 +279,7 @@ public:
             std::this_thread::sleep_for(std::chrono::seconds(5)); // 简单休眠
         }
 
-        return -1;
+
     }
 
 public:

@@ -5,8 +5,15 @@
 #include "subscriber.hpp"
 #include "serial.hpp"
 #include "ElegantLog.hpp"
+
+void signalHandler(int signum){
+    LOG_INFO("Interrupt signal ({}) received.", signum);
+    // 这里可以添加清理代码
+    exit(signum);
+}
 int main(int argc, char const *argv[])
 {
+    std::signal(SIGINT, signalHandler);
 
     // 初始化日志系统
     ElegantLog::initDefaultLogger(true, true, "log/myapp.log");
