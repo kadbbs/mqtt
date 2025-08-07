@@ -269,15 +269,13 @@ public:
                         printf("%02X ", i);
                     }
                     printf("copy tempdata\n");
-                    float floatValue[4];
-                    memcpy(&floatValue[0], tempdata.data(), sizeof(float)); // 避免类型双关（type-punning）问题
-                    memcpy(&floatValue[1], tempdata.data()+4, sizeof(float)); // 避免类型双关（type-punning）问题
-                    memcpy(&floatValue[2], tempdata.data()+8, sizeof(float)); // 避免类型双关（type-punning）问题
-                    memcpy(&floatValue[3], tempdata.data()+12, sizeof(float)); // 避免类型双关（type-punning）问题
-                    std::cout << "\nx_Float Value: " << floatValue[0] << std::endl;
-                    std::cout << "\ny_Float Value: " << floatValue[1] << std::endl;
-                    std::cout << "\nz_Float Value: " << floatValue[2] << std::endl;
-                    std::cout << "\nt_Float Value: " << floatValue[3] << std::endl;
+                    // float floatValue[4];
+                    // memcpy(floatValue.data(), tempdata.data(), 4*sizeof(float)); // 避免类型双关（type-punning）问题
+
+                    // std::cout << "\nx_Float Value: " << floatValue[0] << std::endl;
+                    // std::cout << "\ny_Float Value: " << floatValue[1] << std::endl;
+                    // std::cout << "\nz_Float Value: " << floatValue[2] << std::endl;
+                    // std::cout << "\nt_Float Value: " << floatValue[3] << std::endl;
                     buff.push(tempdata);
                 }
             }
@@ -360,6 +358,20 @@ private:
     }
 
 public:
+
+    std::vector<float> getFloatData(){
+        std::lock_guard<std::mutex> lock(mutex_);
+        auto &lastData = buff.back();
+        printf("当前行号: %d\n", __LINE__);
+        std::vector<float> floatValue(4);
+        memcpy(floatValue.data(), lastData.data(), 4*sizeof(float)); // 避免类型双关（type-punning）问题
+        std::cout << "\nx_Float Value: " << floatValue[0] << std::endl;
+        std::cout << "\ny_Float Value: " << floatValue[1] << std::endl;
+        std::cout << "\nz_Float Value: " << floatValue[2] << std::endl;
+        std::cout << "\nt_Float Value: " << floatValue[3] << std::endl;
+        return floatValue;
+    }
+
     WeatherData processWeatherData()
     {
         std::lock_guard<std::mutex> lock(mutex_);
