@@ -20,6 +20,7 @@ target_include_directories(sen_mqtt
         ${PROJECT_SOURCE_DIR}/result_dir/ssl_result/include
         ${PROJECT_SOURCE_DIR}/result_dir/paho.mqtt.cpp_result/include
         ${PROJECT_SOURCE_DIR}/result_dir/paho.mqtt.c_result/include
+        ${PROJECT_SOURCE_DIR}
 )
 
 # 指定库搜索路径
