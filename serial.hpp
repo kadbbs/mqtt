@@ -122,6 +122,7 @@ private:
 
         config.com = com;
         config.baud_rate = baud_rate;
+        config.data_bits = bits;
         config.parity = parity;
         config.stop_bits = stop_bits;
 
@@ -170,20 +171,20 @@ private:
     std::thread work_;
 
 public:
-    int start()
+    void start()
     {
         // 打开串口
         fd = open(config.com.data(), O_RDWR | O_NOCTTY | O_SYNC);
         if (fd < 0)
         {
             perror("open");
-            return -1;
+            exit(EXIT_FAILURE);
         }
         // 配置串口
-        if (configure_serial(fd) < 0)
+        if (configure_serial() < 0)
         {
             close(fd);
-            return -1;
+            exit(EXIT_FAILURE);
         }
         running = true;
         work_ = std::thread(&meteserial::fromreg, this);
@@ -217,7 +218,7 @@ public:
                     cnt += n;
                     // printf("Sent %zd bytes: ", n);
                 }
-                for (int i = 0; i < tx_len; i++)
+                for (size_t i = 0; i < tx_len; i++)
                 {
                     printf("%02X ", tx_cmd[i]);
                 }
@@ -259,7 +260,6 @@ public:
                         printf("%02X ", rx_buf[i]);
                     }
                     printf("\n");
-                    static int k = 0;
                     std::vector<uint8_t> tempdata(rx_buf + 3, rx_buf + 3 + data.regcnt_l * 2);
                     for (auto i : tempdata)
                     {
@@ -278,6 +278,8 @@ public:
             }
             std::this_thread::sleep_for(std::chrono::seconds(5)); // 简单休眠
         }
+
+        return -1;
     }
 
 public:
@@ -295,7 +297,7 @@ public:
     }
 
 private:
-    int configure_serial(int fd)
+    int configure_serial()
     {
         struct termios tty;
         memset(&tty, 0, sizeof(tty));

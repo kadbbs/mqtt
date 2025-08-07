@@ -32,6 +32,7 @@ LIBS = \
 CXXFLAGS = \
     -std=c++11 \
     -Wall \
+    -Wextra \
     -g \
     $(INC_DIRS)
 

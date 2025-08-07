@@ -49,6 +49,7 @@ public:
             LOG_ERROR("Error: {}", exc.what());
             return 1;
         }
+        return -1;
     }
 
     void subtopic()
@@ -61,7 +62,7 @@ public:
     void subtopic(std::string topic, int qos=1)
     {
         // Subscribe to topic
-        client.subscribe(topic, 1)->wait();
+        client.subscribe(topic, qos)->wait();
         LOG_INFO("Subscribed to topic: {}", topic);
 
         // Keep running to receive messages
