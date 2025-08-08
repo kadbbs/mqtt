@@ -161,3 +161,23 @@ arm-none-linux-gnueabihf-g++ \
     your_app.cpp -o your_app
 
 ```
+
+
+
+### route 配置
+
+添加路由
+
+```
+route add -net 0.0.0.0 gw 192.168.1.1 dev eth0 metric 50
+```
+删除路由
+
+```
+route del dev etho
+```
+使用 ip route get 查询目标 IP 的路由路径
+
+```
+ip route get 8.8.8.8
+```

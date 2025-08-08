@@ -65,8 +65,6 @@ public:
 
         if (size_ < capacity_)
         {
-
-            printf("size_ %d \n", size_);
             return data[size_ - 1];
         }
         else
@@ -218,13 +216,9 @@ public:
                         break;
                     }
                     cnt += n;
-                    // printf("Sent %zd bytes: ", n);
                 }
-                for (size_t i = 0; i < tx_len; i++)
-                {
-                    printf("%02X ", tx_cmd[i]);
-                }
-                printf("\n");
+                LOG_INFO("Sent {} bytes to serial port: {}", cnt, config.com);
+                LOG_INFO("{}", ElegantLog::formathex(tx_cmd, tx_len));
                 // 清空读串口缓冲区
                 if (tcflush(fd, TCIFLUSH) == -1)
                 {
@@ -246,7 +240,6 @@ public:
                     }
                     else if (n == 0)
                     {
-                        printf("Timeout reached!\n");
                         LOG_WARN("Timeout reached when reading from serial port: {}", config.com);
                         break;
                     }
@@ -264,13 +257,6 @@ public:
                     LOG_INFO("{}", ElegantLog::formathex(rx_buf, 5 + data.regcnt_l * 2));
 
                     std::vector<uint8_t> tempdata(rx_buf + 3, rx_buf + 3 + data.regcnt_l * 2);
-                    // float floatValue[4];
-                    // memcpy(floatValue.data(), tempdata.data(), 4*sizeof(float)); // 避免类型双关（type-punning）问题
-
-                    // std::cout << "\nx_Float Value: " << floatValue[0] << std::endl;
-                    // std::cout << "\ny_Float Value: " << floatValue[1] << std::endl;
-                    // std::cout << "\nz_Float Value: " << floatValue[2] << std::endl;
-                    // std::cout << "\nt_Float Value: " << floatValue[3] << std::endl;
                     buff.push(tempdata);
                 }
             }
@@ -287,10 +273,11 @@ public:
         auto &lastData = buff.back();
         std::vector<float> floatValue(4);
         memcpy(floatValue.data(), lastData.data(), 4*sizeof(float)); // 避免类型双关（type-punning）问题
-        std::cout << "\nx_Float Value: " << floatValue[0] << std::endl;
-        std::cout << "\ny_Float Value: " << floatValue[1] << std::endl;
-        std::cout << "\nz_Float Value: " << floatValue[2] << std::endl;
-        std::cout << "\nt_Float Value: " << floatValue[3] << std::endl;
+        LOG_INFO("x_Float Value: {}", floatValue[0]);
+        LOG_INFO("y_Float Value: {}", floatValue[1]);
+        LOG_INFO("z_Float Value: {}", floatValue[2]);
+        LOG_INFO("t_Float Value: {}", floatValue[3]);
+
         return floatValue;
     }
 
