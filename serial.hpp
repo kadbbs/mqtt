@@ -260,10 +260,8 @@ public:
                 {
                     // 打印接收到的原始数据
                     LOG_INFO("Received {} bytes from serial port: {}", cnt, config.com);
-                    for (int i = 0; i < 5 + data.regcnt_l * 2; i++)
-                    {
-                        LOG_INFO("{}",ElegantLog::formathex("%02X", rx_buf[i]));
-                    }
+
+                    LOG_INFO("{}", ElegantLog::formathex(rx_buf, 5 + data.regcnt_l * 2));
 
                     std::vector<uint8_t> tempdata(rx_buf + 3, rx_buf + 3 + data.regcnt_l * 2);
                     // float floatValue[4];

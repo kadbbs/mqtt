@@ -16,15 +16,44 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <iomanip>
+#include <cstdint>
 #include <condition_variable>
 
 namespace ElegantLog
 {
 
-    std::string formathex(const std::string &fmt,uint8_t data){
+    std::string formathex(const std::string &fmt, uint8_t data)
+    {
         char buffer[10];
         snprintf(buffer, sizeof(buffer), fmt.c_str(), data);
         return std::string(buffer);
+    }
+    //开销太高
+    // std::string formathex(uint8_t* data,size_t size){
+    //     std::ostringstream oss;
+    //     oss<<std::hex<<std::setfill('0')<< std::uppercase;
+    //     for(size_t i = 0; i < size; ++i){
+    //         oss <<std::setw(2)<< static_cast<int>(data[i])<<" ";
+    //     }
+    //     return oss.str();
+    // }
+
+    std::string formathex(const uint8_t *data, size_t size)
+    {
+        static const char hexDigits[] = "0123456789abcdef";
+        std::string result;
+        result.reserve(size * 3); // 每字节 "xx "，3 个字符
+
+        for (size_t i = 0; i < size; ++i)
+        {
+            uint8_t byte = data[i];
+            result.push_back(hexDigits[byte >> 4]);   // 高 4 位
+            result.push_back(hexDigits[byte & 0x0F]); // 低 4 位
+            result.push_back(' ');
+        }
+
+        return result;
     }
 
     // ==================== 核心枚举和工具 ====================
@@ -333,7 +362,8 @@ namespace ElegantLog
                     m_cv.wait(lock, [this]
                               { return !m_queue.empty() || !m_running; });
 
-                    if (!m_running && m_queue.empty()) break;
+                    if (!m_running && m_queue.empty())
+                        break;
 
                     if (!m_queue.empty())
                     {
@@ -359,7 +389,7 @@ namespace ElegantLog
     public:
         Logger() : m_level(LogLevel::INFO), m_async(true) {}
 
-        void setLevel(LogLevel level=ElegantLog::LogLevel::DEBUG) { m_level = level; }
+        void setLevel(LogLevel level = ElegantLog::LogLevel::DEBUG) { m_level = level; }
         LogLevel level() const { return m_level; }
 
         void setAsync(bool async)
@@ -459,7 +489,7 @@ namespace ElegantLog
 
     // ==================== 初始化工具 ====================
     inline void initDefaultLogger(bool console = true, bool file = false,
-                                  const std::string &filename = "myapp.log")
+                                  const std::string &filename = "log/myapp.log")
     {
         auto &logger = Logger::instance();
         logger.removeAllSinks();
@@ -480,7 +510,7 @@ namespace ElegantLog
                 struct stat st;
                 if (stat(dir, &st) == -1)
                 {
-                    LOG_ERROR("log 目录不存在，正在创建...\n");
+                    LOG_ERROR("log 目录不存在，正在创建...");
                     if (mkdir(dir, 0755) == 0)
                     {
                         LOG_ERROR("log 目录创建成功\n");
@@ -489,22 +519,20 @@ namespace ElegantLog
                     else
                     {
 
-                        LOG_ERROR("log 目录创建失败\n");
+                        LOG_ERROR("log 目录创建失败");
                     }
                 }
                 else if (!S_ISDIR(st.st_mode))
                 {
 
-                    LOG_ERROR("存在 log，但不是一个目录\n");
+                    LOG_ERROR("存在 log，但不是一个目录");
                 }
                 else
                 {
 
-                    LOG_INFO("log 目录已存在\n");
+                    LOG_INFO("log 目录已存在");
                     logger.addSink(std::make_shared<FileSink>(filename));
                 }
-
-                
             }
             catch (const std::exception &e)
             {
